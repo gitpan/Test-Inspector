@@ -43,6 +43,8 @@ but don't really want to be worrying about if I have tested 'find' or
 use strict;
 use warnings;
 
+our $VERSION = '0.03';
+
 use File::Find;
 use lib '/Users/mkerr/code';
 
