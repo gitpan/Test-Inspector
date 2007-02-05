@@ -44,7 +44,7 @@ use strict;
 use warnings;
 
 use File::Find;
-our $VERSION = '0.01';
+use lib '/Users/mkerr/code';
 
 =head2 setup
 
@@ -110,9 +110,10 @@ referenced in any way.
 sub _check {
   my ($self, $mod, $file) = @_;
   my $methods = join '|', keys %{ $self->{$mod} };
-  my %results;
+  my (%results, $use);
   open FILE, '<', $file or return;
   for my $line (<FILE>) {
+    $results{'__is_used__'}++ if $line =~ m/(use|use_ok|require|require_ok).*$mod/;
     for my $meth (keys %{ $self->{$mod} }) {
       $results{$meth} ||= 0;
       next unless $line =~ m/$meth/;
@@ -158,13 +159,17 @@ spent on this in total...wait! come back!
 sub pretty_report {
   my $self = shift;
   my %results = $self->inspect;
-  my $ignore = join "|", @{ $self->{ignore} || [] };
+  my $ignore = join "|", @{ $self->{ignore} || [] }, '__is_used__';
   for my $module (sort keys %results) {
     print "$module\n";
     for my $test_script (sort keys %{ $results{$module} }) {
       print "\t$test_script\n";
       my ($found, $not, $status) = (0, 0, '');
       for my $method (sort keys %{ $results{$module}{$test_script} }) {
+        do {
+          print "\t\t$module not used in this script\n";
+          last;
+        } unless exists $results{$module}{$test_script}{'__is_used__'};
         next if $ignore && $method =~ m/$ignore/;
         if ($results{$module}{$test_script}{$method}) {
           $status = 'FOUND'; $found++;
@@ -194,17 +199,6 @@ When you use the script itself to try and self-test, it all gets a bit
 self-referential doesn't it? Probably not the best code I have ever written,
 but probably more useful that all the other stuff. Who am I kidding?
 
-=head1 FURTHER INFO
-
-If you run 'make test', it should say passed. If you install it, then rerun
-t/test.pl, you will see more output.
-
-This module was brought to you by the free wireless on the journey home one
-night on the coach. As I get travel sick if I do anything other than listen
-to music while moving in some vehicle or another, this was coded in haste. I
-am still repenting. Which means writing these docs. You know, if you are even
-reading this far, I am impressed.
-
 =head1 TODO
 
  o Stuff, no doubt. This did what I wanted it to do, in a crude way.
@@ -212,9 +206,6 @@ reading this far, I am impressed.
 =head1 AUTHOR
 
   (c) Stray Toaster 2007.
-
-If you found this useful/annoying/dumb/something other than just a meh,
-please drop me a line to say so. It will make my day. And I will reply.
 
 =cut
 
